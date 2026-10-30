@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Revision Desk</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: narrow Word task pane; colour = task type, matching the coloured squares in each Word comment */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --ink: #1a2130; --muted: #5a6476; --line: #dce1e9;
+  --admin: #3a6db5; --figure: #d0661c; --methods: #c0435a; --discuss: #22897a; --writing: #9a7d00; --cite: #7456c0;
+  --ok: #2f8a4a; --warn: #b4531a;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", -apple-system, system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15181e; --surface: #1d222b; --ink: #e7eaf0; --muted: #9ba4b4; --line: #2e3542;
+  --admin: #74a0e3; --figure: #f0954d; --methods: #e9788b; --discuss: #4fc4b0; --writing: #e2c541; --cite: #a98ee8; --ok: #5cc27a; --warn: #f0905a;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15181e; --surface: #1d222b; --ink: #e7eaf0; --muted: #9ba4b4; --line: #2e3542;
+  --admin: #74a0e3; --figure: #f0954d; --methods: #e9788b; --discuss: #4fc4b0; --writing: #e2c541; --cite: #a98ee8; --ok: #5cc27a; --warn: #f0905a;
+  color-scheme: dark }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.45; }
+#app { padding: 14px 12px 70px; display: flex; flex-direction: column; gap: 14px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: 20px; line-height: 1.15; margin: 4px 0 0; text-wrap: balance; }
+h1.clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 16px; margin: 0; }
+p { margin: 0; }
+.eyebrow { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.note { color: var(--muted); font-size: 13px; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.spacer { flex: 1; }
+.btn { border: 1.5px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; font-weight: 500; font-size: 13px; }
+.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); font-weight: 600; }
+.btn.go { background: var(--ok); border-color: var(--ok); color: var(--bg); font-weight: 600; }
+.btn.go.undo { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn.big { padding: 10px 14px; font-size: 14px; width: 100%; }
+.btn.danger { color: var(--methods); }
+.linkbtn { border: 0; background: none; padding: 2px 0; color: var(--muted); font-weight: 500; font-size: 13px; text-align: left; }
+.linkbtn:hover { color: var(--ink); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.or { text-align: center; color: var(--muted); font-size: 12px; font-family: var(--f-mono); }
+textarea, .txt { width: 100%; border: 1.5px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; background: var(--bg); color: var(--ink); }
+textarea { min-height: 90px; resize: vertical; }
+.drop { position: relative; border: 2px dashed var(--line); border-radius: 10px; padding: 14px 10px; text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.drop.over { border-color: var(--admin); }
+.drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.drop b { font-size: 14px; } .drop span { font-size: 12px; color: var(--muted); }
+.stat { font-size: 12px; font-family: var(--f-mono); }
+.stat.ok { color: var(--ok); } .stat.bad { color: var(--warn); }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+.check input { margin-top: 3px; }
+.banner { border: 1.5px solid color-mix(in srgb, var(--warn) 50%, var(--line)); background: color-mix(in srgb, var(--warn) 9%, var(--surface)); border-radius: 10px; padding: 10px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 8px; }
+.steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.steps li { display: flex; gap: 8px; align-items: baseline; color: var(--muted); }
+.steps li::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); flex: none; transform: translateY(1px); }
+.steps li.done { color: var(--ink); } .steps li.done::before { background: var(--ok); border-color: var(--ok); }
+.steps li.now { color: var(--ink); font-weight: 600; } .steps li.now::before { border-color: var(--admin); border-top-color: transparent; animation: spin 1s linear infinite; }
+.steps small { font-weight: 400; color: var(--muted); font-family: var(--f-mono); }
+@keyframes spin { to { transform: translateY(1px) rotate(360deg); } }
+.err { color: var(--warn); font-size: 13px; }
+ol.how { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+
+.head { display: flex; gap: 10px; align-items: flex-start; }
+.head > div:first-child { flex: 1; min-width: 0; }
+.due { flex: none; text-align: right; font-variant-numeric: tabular-nums; }
+.due b { display: block; font-family: var(--f-display); font-size: 24px; line-height: 1; }
+.due span { font-size: 11px; color: var(--muted); }
+.bar { display: flex; gap: 2px; height: 10px; }
+.seg { position: relative; border-radius: 3px; overflow: hidden; background: color-mix(in srgb, var(--c) 20%, transparent); }
+.seg i { position: absolute; inset: 0 auto 0 0; background: var(--c); }
+.pmeta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); margin-top: 5px; font-variant-numeric: tabular-nums; }
+.tabs { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 3px; gap: 2px; }
+.tabs button { flex: 1; border: 0; background: none; padding: 6px 4px; border-radius: 6px; font-weight: 500; font-size: 13px; color: var(--muted); }
+.tabs button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.chip { display: inline-flex; align-items: center; gap: 5px; border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 9px 3px 7px; font-size: 12px; font-weight: 500; }
+.chip .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.chip[aria-pressed="true"] { border-color: var(--c, var(--ink)); background: color-mix(in srgb, var(--c, var(--ink)) 12%, var(--surface)); }
+.chip[aria-pressed="false"] { opacity: .5; }
+.chip small { color: var(--muted); }
+
+.groups { display: flex; flex-direction: column; gap: 16px; }
+.gtitle { display: flex; align-items: center; gap: 7px; font-family: var(--f-display); font-weight: 600; font-size: 14px; margin: 0 0 7px; }
+.gtitle .dot { width: 12px; height: 12px; border-radius: 3px; background: var(--c); }
+.gtitle small { font-family: var(--f-body); font-weight: 400; color: var(--muted); font-size: 12px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 7px; }
+.tile { position: relative; text-align: left; border: 1.5px solid color-mix(in srgb, var(--c) 45%, var(--line)); background: color-mix(in srgb, var(--c) 10%, var(--surface));
+  border-radius: 8px; padding: 8px 9px 9px; display: flex; flex-direction: column; gap: 4px; min-height: 104px; min-width: 0; }
+.tile:hover { border-color: var(--c); }
+.tile .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 4px; }
+.sym { font-family: var(--f-mono); font-weight: 600; font-size: 16px; color: var(--c); line-height: 1; overflow-wrap: anywhere; }
+.effort { display: flex; gap: 2px; padding-top: 3px; flex: none; }
+.effort i { width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid var(--c); }
+.effort i.on { background: var(--c); }
+.tile .t { font-weight: 600; font-size: 13px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.tile .w { margin-top: auto; font-size: 11px; color: var(--muted); font-family: var(--f-mono); }
+.tile.done { background: var(--surface); border-style: dashed; opacity: .55; }
+.tile.done .t { text-decoration: line-through; }
+.tick { display: none; position: absolute; top: 7px; right: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--ok); color: var(--bg); font-size: 12px; place-items: center; font-weight: 700; }
+.tile.done .tick { display: grid; } .tile.done .effort { display: none; }
+.empty { color: var(--muted); padding: 18px; border: 1.5px dashed var(--line); border-radius: 10px; text-align: center; font-size: 13px; }
+
+.dcard { border-radius: 12px; overflow: hidden; border: 1.5px solid color-mix(in srgb, var(--c) 50%, var(--line)); background: var(--surface); }
+.dhead { background: var(--c); color: var(--bg); padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
+.dhead .cat { font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; opacity: .9; }
+.dhead .sym { color: var(--bg); font-size: 22px; }
+.dhead h2 { font-size: 17px; line-height: 1.2; font-weight: 700; color: var(--bg); text-wrap: balance; }
+.dbody { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 14px; }
+.dbody h3 { font-size: 11px; font-family: var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; font-weight: 500; }
+.pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.pill { font-size: 12px; padding: 2px 8px; border-radius: 6px; background: color-mix(in srgb, var(--c) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c) 35%, var(--line)); }
+blockquote { margin: 0; padding: 9px 11px; border-left: 3px solid var(--c); background: var(--bg); border-radius: 0 6px 6px 0; font-size: 13px; overflow-wrap: anywhere; }
+blockquote cite { display: block; font-style: normal; font-size: 11px; color: var(--muted); margin-bottom: 3px; font-family: var(--f-mono); }
+.together { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-size: 12px; color: var(--muted); }
+.together button { border: 1.5px solid var(--cc); color: var(--cc); background: none; border-radius: 6px; padding: 1px 7px; font-family: var(--f-mono); font-size: 12px; font-weight: 600; }
+.stance { display: flex; flex-wrap: wrap; gap: 5px; }
+.stance button { border: 1.5px solid var(--line); background: var(--surface); border-radius: 7px; padding: 5px 9px; font-size: 13px; }
+.stance button[aria-pressed="true"] { border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface)); font-weight: 600; }
+.cats { display: flex; gap: 6px; flex-wrap: wrap; }
+.cats button { width: 24px; height: 24px; border-radius: 6px; border: 2px solid var(--surface); background: var(--cc); box-shadow: 0 0 0 1px var(--line); }
+.cats button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
+.dfoot { display: flex; gap: 6px; flex-wrap: wrap; }
+.loc { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.loc .dotc { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+.focus-note { color: var(--muted); font-size: 13px; text-align: center; }
+.letter pre { white-space: pre-wrap; font-family: var(--f-body); font-size: 13px; margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; max-height: 60vh; overflow-y: auto; overflow-wrap: anywhere; }
+.more { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 12px; }
+.more .row .btn { flex: 1 1 140px; }
+.statusbar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--ink); color: var(--bg); padding: 9px 12px; font-size: 13px; display: flex; gap: 8px; align-items: center; z-index: 5; }
+.statusbar::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bg); border-top-color: transparent; animation: spin 1s linear infinite; flex: none; }
+.toast { position: fixed; left: 12px; right: 12px; bottom: 12px; background: var(--ink); color: var(--bg); padding: 9px 12px; border-radius: 8px; font-size: 13px; z-index: 6; text-align: center; }
+.key { font-family: var(--f-mono); font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { .steps li.now::before, .statusbar::before { animation: none; } }
+</style>
+</head>
+<body>
+<div id="app"><p class="note">Loading…</p></div>
+<div class="statusbar" id="status" hidden></div>
+<div class="toast" id="toast" hidden></div>
+<textarea id="copyBuf" aria-hidden="true" tabindex="-1" style="position:fixed;left:-9999px;top:0;width:10px;height:10px"></textarea>
+<script>
+"use strict";
+const CATS = {
+  admin:   { name: "Journal & admin", sq: "🟦", hint: "Forms, statements, emails, formatting." },
+  figure:  { name: "Figures & tables", sq: "🟧", hint: "Maps, plots, captions, legends, image rights." },
+  methods: { name: "Methods & data", sq: "🟥", hint: "Sampling, analyses, statistics, extra work." },
+  discuss: { name: "Results & discussion", sq: "🟩", hint: "Interpretation and argument." },
+  writing: { name: "Clarity & language", sq: "🟨", hint: "Wording, structure, terminology." },
+  cite:    { name: "References", sq: "🟪", hint: "Citations to add or check." }
+};
+const SQ2CAT = Object.fromEntries(Object.entries(CATS).map(([k, v]) => [v.sq, k]));
+const EFFORT = { 1: "~15–30 min", 2: "~1–2 hours", 3: "half a day +" };
+const STANCES = [["accept", "Accept"], ["partly", "Partly accept"], ["rebut", "Respectfully disagree"]];
+const MODELS = [["claude-sonnet-5-5", "Sonnet: good and affordable (recommended)"], ["claude-opus-5-5", "Opus: most careful, costs more"], ["claude-haiku-5-5", "Haiku: fastest and cheapest"]];
+const TAG = "Revision Desk";
+const LIBS = {
+  mammoth: "https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js",
+  pdf: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",
+  pdfWorker: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"
+};
+
+/* ---------- small helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const cv = c => `--c: var(--${c})`;
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const clean = t => String(t).replace(/ /g, " ").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, " ").replace(/[ \t]+/g, " ").replace(/ *\n */g, "\n").trim();
+const norm = s => String(s).toLowerCase().replace(/[’‘`]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ");
+const findQuote = (text, q) => q ? norm(text).indexOf(norm(q)) : -1;
+const sq = s => String(s).replace(/\s+/g, " ").trim().replace(/\^/g, "^^").slice(0, 240);
+const anchorOf = t => String(t).split(/\s+/).slice(0, 12).join(" ").slice(0, 200);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2800); }
+function setBusy(msg) { const s = $("#status"); if (msg) { s.textContent = msg; s.hidden = false; } else s.hidden = true; }
+function daysLeft(due) { if (!due) return null; const d = new Date(due + "T23:59:00"); return isNaN(d) ? null : Math.max(0, Math.ceil((d - new Date()) / 864e5)); }
+function fmtDate(due) { const d = new Date(due + "T12:00:00"); return isNaN(d) ? due : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); }
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) return res();
+    const s = document.createElement("script"); s.src = src; s.onload = res;
+    s.onerror = () => rej(new Error("Couldn't load the file reader. Check your internet connection."));
+    document.head.appendChild(s);
+  });
+}
+
+/* ---------- reading review files ---------- */
+async function fileText(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".doc")) throw new Error("old .doc files can't be read; save as .docx or PDF");
+  if (name.endsWith(".docx")) {
+    await loadScript(LIBS.mammoth);
+    return (await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })).value;
+  }
+  if (name.endsWith(".pdf")) {
+    await loadScript(LIBS.pdf); await loadScript(LIBS.pdfWorker);
+    const lib = window.pdfjsLib; lib.GlobalWorkerOptions.workerSrc = LIBS.pdfWorker;
+    const pdf = await lib.getDocument({ data: await file.arrayBuffer() }).promise; let out = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const tc = await (await pdf.getPage(i)).getTextContent(); let y = null;
+      for (const it of tc.items) { if (!("str" in it)) continue; const iy = it.transform[5]; if (y !== null && Math.abs(iy - y) > 2) out += "\n"; out += it.str; y = iy; if (it.hasEOL) { out += "\n"; y = null; } }
+      out += "\n\n";
+    }
+    return out;
+  }
+  return file.text();
+}
+
+/* ---------- the open Word document ---------- */
+async function readDoc() {
+  return Word.run(async ctx => {
+    const ps = ctx.document.body.paragraphs;
+    try { ps.load("items/text,items/style,items/styleBuiltIn"); await ctx.sync(); }
+    catch (e) { ps.load("items/text"); await ctx.sync(); }
+    const out = [];
+    ps.items.forEach((p, wi) => {
+      const t = clean(p.text); if (!t) return;
+      const sb = String(p.styleBuiltIn || ""), st = String(p.style || "");
+      const m = sb.match(/^Heading(\d)/i) || st.match(/^(?:Heading|Título|Titulo|Titre|Überschrift|Encabezado|Kop|Intestazione)\s*(\d)/i);
+      const h = m ? +m[1] : (/^Title$/i.test(sb) ? 1 : 0);
+      out.push(h ? { t, h, wi } : { t, wi });
+    });
+    return out;
+  });
+}
+function commentText(t) {
+  return `${CATS[t.cat].sq} ${t.id} · ${t.title}\nTo do: ${t.todo}` + (t.where ? `\nWhere: ${t.where}` : "") +
+    (t.orig ? `\n${t.source} wrote: “${t.orig}”` : "") + `\n— ${TAG} · ${CATS[t.cat].name} · ${"●".repeat(t.e)}${"○".repeat(3 - t.e)}`;
+}
+const isOurs = content => String(content || "").includes(`— ${TAG} ·`);
+const prefixOf = t => `${CATS[t.cat].sq} ${t.id} · `;
+function parseComment(content) {
+  const lines = String(content).split(/\r\n|\r|\n|\u000b/);
+  const m = (lines[0] || "").match(/^(\S+)\s+(\S+)\s+·\s+(.*)$/u);
+  if (!m || !SQ2CAT[m[1]]) return null;
+  const t = { id: m[2], cat: SQ2CAT[m[1]], title: m[3], todo: "", orig: "", source: "Reviewer", e: 2, stance: "accept", where: "", quote: null, anchor: null };
+  lines.slice(1).forEach(l => {
+    let x;
+    if ((x = l.match(/^To do:\s*(.*)$/))) t.todo = x[1];
+    else if ((x = l.match(/^Where:\s*(.*)$/))) t.where = x[1];
+    else if ((x = l.match(/^(.{1,40}?) wrote:\s*“([\s\S]*)”\s*$/))) { t.source = x[1]; t.orig = x[2]; }
+    else if (l.includes(TAG)) { const n = (l.match(/●/g) || []).length; if (n) t.e = Math.min(3, n); }
+  });
+  if (!t.orig) { const r = t.id.match(/^R(\d+)/); t.source = /^E\d/.test(t.id) ? "Editor" : r ? `Reviewer ${r[1]}` : "Reviewer"; }
+  return t;
+}
+async function allComments(ctx) {
+  const cs = ctx.document.body.getComments(); cs.load("items/id,items/content,items/resolved"); await ctx.sync(); return cs.items;
+}
+function matchComment(items, t) {
+  return items.find(c => c.id === t.cid) || items.find(c => String(c.content || "").startsWith(prefixOf(t)) && isOurs(c.content)) || null;
+}
+
+/* Insert one comment per task, on the quoted words when found, else on its paragraph */
+async function placeTasks(list) {
+  let placed = 0, i = 0;
+  if (!list.length) return 0;
+  await Word.run(async ctx => {
+    const body = ctx.document.body; let ps = null;
+    if (list.some(t => t.wi != null)) { ps = body.paragraphs; ps.load("items/text"); await ctx.sync(); }
+    for (const t of list) {
+      i++; setBusy(`Adding comments to your manuscript… ${i} of ${list.length}`);
+      try {
+        let para = null, range = null;
+        if (ps && t.wi != null && ps.items[t.wi]) para = ps.items[t.wi];
+        if (!para && t.anchor) {
+          const r = body.search(sq(t.anchor), { matchCase: false }); r.load("items"); await ctx.sync();
+          if (r.items.length) para = r.items[0].paragraphs.getFirst();
+        }
+        if (t.quote) {
+          for (const o of [{ matchCase: false }, { matchCase: false, ignorePunct: true, ignoreSpace: true }]) {
+            const r = (para || body).search(sq(t.quote), o); r.load("items"); await ctx.sync();
+            if (r.items.length) { range = r.items[0]; break; }
+          }
+        }
+        if (!range && para) range = para.getRange("Whole");
+        if (range) { const c = range.insertComment(commentText(t)); c.load("id"); await ctx.sync(); t.cid = c.id; placed++; }
+        else t.cid = null;
+      } catch (e) { console.warn("Couldn't place", t.id, e); t.cid = null; }
+      delete t.wi;
+    }
+  });
+  setBusy(null); save(); return placed;
+}
+async function removeOurComments() {
+  await Word.run(async ctx => { const items = await allComments(ctx); items.forEach(c => { if (isOurs(c.content)) c.delete(); }); await ctx.sync(); });
+  if (D) D.tasks.forEach(t => t.cid = null);
+}
+async function withComment(t, fn) {
+  return Word.run(async ctx => { const items = await allComments(ctx); const c = matchComment(items, t); if (!c) return false; t.cid = c.id; await fn(c, ctx); await ctx.sync(); return true; });
+}
+let syncing = false;
+async function syncFromWord() {
+  if (!D || !D.tasks.length || syncing || !api14) return;
+  syncing = true;
+  try {
+    let changed = false;
+    await Word.run(async ctx => {
+      const items = await allComments(ctx);
+      D.tasks.forEach(t => {
+        const c = matchComment(items, t);
+        if (!c) { if (t.cid) { t.cid = null; changed = true; } return; }
+        if (t.cid !== c.id) { t.cid = c.id; changed = true; }
+        if (!!c.resolved !== !!D.state.done[t.id]) { D.state.done[t.id] = !!c.resolved; changed = true; }
+      });
+    });
+    if (changed) { save(); render(); }
+  } catch (e) { console.warn("sync", e); }
+  syncing = false;
+}
+async function recoverFromComments() {
+  try {
+    return await Word.run(async ctx => {
+      const items = (await allComments(ctx)).filter(c => isOurs(c.content)); if (!items.length) return null;
+      const tasks = []; const done = {};
+      items.forEach(c => { const t = parseComment(c.content); if (t && !tasks.some(x => x.id === t.id)) { t.cid = c.id; tasks.push(t); if (c.resolved) done[t.id] = true; } });
+      return tasks.length ? { tasks, done } : null;
+    });
+  } catch (e) { return null; }
+}
+
+/* ---------- Claude API (your own key) ---------- */
+const getKey = () => store.get("rd-apikey") || "";
+const getModel = () => store.get("rd-model") || MODELS[0][0];
+async function askClaude(prompt, { onText, signal } = {}) {
+  const key = getKey(); if (!key) throw { code: "no_key" };
+  let res;
+  try {
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST", signal,
+      headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+      body: JSON.stringify({ model: getModel(), max_tokens: 16000, stream: true, messages: [{ role: "user", content: prompt }] })
+    });
+  } catch (e) { throw { code: e && e.name === "AbortError" ? "cancelled" : "network" }; }
+  if (!res.ok) {
+    let msg = ""; try { const j = await res.json(); msg = (j.error && j.error.message) || ""; } catch (e) {}
+    const s = res.status;
+    throw { code: s === 401 || s === 403 ? "bad_key" : s === 429 ? "rate" : s === 529 || s >= 500 ? "overloaded" : (s === 404 || /model/i.test(msg)) ? "bad_model" : /credit|billing/i.test(msg) ? "credit" : "http", message: msg };
+  }
+  const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "", text = "", stop = null;
+  try {
+    for (;;) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true }); let i;
+      while ((i = buf.indexOf("\n\n")) >= 0) {
+        const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+        const line = chunk.split("\n").find(l => l.startsWith("data:")); if (!line) continue;
+        let ev; try { ev = JSON.parse(line.slice(5)); } catch (e) { continue; }
+        if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta") { text += ev.delta.text; onText && onText(text); }
+        else if (ev.type === "message_delta" && ev.delta) stop = ev.delta.stop_reason || stop;
+        else if (ev.type === "error") throw { code: ev.error && ev.error.type === "overloaded_error" ? "overloaded" : "http", message: ev.error && ev.error.message };
+      }
+    }
+  } catch (e) { if (e && e.name === "AbortError") throw { code: "cancelled" }; throw e.code ? e : { code: "network" }; }
+  if (stop === "max_tokens") throw { code: "too_long" };
+  return text;
+}
+function parseJSON(text) {
+  const tries = [text];
+  const f = text.match(/```(?:json)?\s*([\s\S]*?)```/); if (f) tries.push(f[1]);
+  const a = [text.indexOf("{"), text.indexOf("[")].filter(i => i >= 0); const b = Math.max(text.lastIndexOf("}"), text.lastIndexOf("]"));
+  if (a.length && b > Math.min(...a)) tries.push(text.slice(Math.min(...a), b + 1));
+  for (const s of tries) { try { return JSON.parse(s); } catch (e) {} }
+  throw { code: "invalid_json" };
+}
+const countIds = text => (text.match(/"id"\s*:/g) || []).length;
+
+function extractPrompt(reviews, msHead, prev) {
+  const prevNote = prev && prev.tasks.length ? `\n\nThis is revision round ${prev.round + 1}. Below are the tasks from the previous round with the authors' responses. If a new task continues or repeats one of them, add "follows": "<previous id>" to it.\nPREVIOUS ROUND:\n${prev.tasks.map(t => `${t.id} | ${t.title} | response: ${(t.note || "none recorded").slice(0, 200)}`).join("\n")}` : "";
+  return `You help an academic researcher turn peer-review feedback into a revision task list.
+
+Split the REVIEW TEXT into atomic, actionable tasks:
+- One task per distinct thing the authors must do or answer. If one comment asks for two different changes, make two tasks.
+- Include editor and journal requirements (statements, forms, figure permissions, formatting, data availability).
+- Skip praise, summaries of the paper, questionnaire answers ("Is the manuscript technically sound? Yes"), and journal information that needs no action (ORCID reminders, protocols.io adverts, figure-tool links).
+- Keep the order of the text.
+
+For each task give:
+- "id": "E1","E2"… for editor/journal items; "R1.1","R1.2"… for Reviewer 1, "R2.1"… for Reviewer 2, and so on, using the reviewer numbers in the text.
+- "source": "Editor" or "Reviewer 1", "Reviewer 2"…
+- "cat": one of "admin" (journal requirements, statements, forms, formatting, file naming, data/ethics/funding statements), "figure" (figures, tables, maps, captions, legends, image rights), "methods" (methods, sampling, data, analyses, statistics, new work requested), "discuss" (results, interpretation, discussion, framing, conclusions), "writing" (clarity, language, structure, terminology, typos, explaining things for readers), "cite" (references to add, check or remove).
+- "effort": 1 = under 30 minutes, 2 = an hour or two, 3 = half a day or more.
+- "stance": "accept" by default; "partly" when the request is optional or very costly (new lab analyses, new fieldwork) and a partial answer with justification is reasonable; "rebut" only when the reviewer seems mistaken.
+- "title": at most 8 words, plain.
+- "where": the place in the manuscript, short and concrete (e.g. "Methods, sampling", "Fig 3 caption", "Cover letter", "Supporting Information"); include the line or page numbers if the reviewer cites them (e.g. "Results, L. 210-215").
+- "todo": 1-3 short plain sentences saying exactly what to change or write, specific to this paper.
+- "orig": the reviewer's or editor's own words for this task, copied verbatim, at most 60 words; mark cuts with "…".
+
+Also give "groups": sets of 2 or more task ids that one change would answer together, each with a "note" of at most 20 words.
+The text may come from any journal or publisher, in any layout (an email, a reviewer report PDF, several reports one after another, numbered or bulleted comments). Work out who wrote what from headings such as "Reviewer #2", "Referee 1", "Associate Editor" or "Comments to the author".${prevNote}
+And "meta": the manuscript "title", "journal", manuscript "ref" number, "due" date as YYYY-MM-DD, and "editor" (name with title, e.g. "Dr. Jane Smith"). Use null for anything not stated.
+
+Reply with only JSON in this shape:
+{"meta":{"title":"…","journal":"…","ref":"…","due":"2026-12-27","editor":"…"},"tasks":[{"id":"R1.1","source":"Reviewer 1","cat":"methods","effort":2,"stance":"accept","title":"…","where":"…","todo":"…","orig":"…"}],"groups":[{"ids":["R1.2","R2.3"],"note":"…"}]}
+
+${msHead ? `START OF THE MANUSCRIPT (context only):\n<<<\n${msHead}\n>>>\n\n` : ""}REVIEW TEXT:
+<<<
+${reviews}
+>>>`;
+}
+function anchorPrompt(block, tasks) {
+  return `Below is a manuscript split into numbered paragraphs, followed by revision tasks from peer review.
+
+For each task, choose the ONE paragraph where the change should be made, or that the comment is about. Reviewers often cite line numbers ("L. 210", "lines 45-50"); when paragraphs show line ranges, use them to find the right paragraph. Use null when the task concerns the whole manuscript, a separate file (cover letter, forms, Supporting Information, submission system), or when no paragraph clearly matches. For a figure or table, prefer its caption paragraph, else the paragraph that first discusses it.
+
+Also give "quote": 3 to 12 consecutive words copied exactly, character for character, from that paragraph, marking the spot the task is most about. Use null if no specific words fit.
+
+Reply with only a JSON array with one entry per task, in this shape:
+[{"id":"R1.1","p":12,"quote":"exact words from paragraph 12"}]
+
+MANUSCRIPT:
+<<<
+${block}
+>>>
+
+TASKS (id | where | title | what to do):
+${tasks.map(t => `${t.id} | ${t.where} | ${t.title} | ${t.todo}`).join("\n")}`;
+}
+function normalize(raw) {
+  const meta = (raw && raw.meta) || {}; const seen = new Set();
+  const tasks = ((raw && raw.tasks) || []).filter(t => t && t.id && t.title).map(t => {
+    let id = String(t.id).replace(/\s+/g, "").slice(0, 12); while (seen.has(id)) id += "b"; seen.add(id);
+    return { id, source: String(t.source || "Reviewer").slice(0, 40), cat: CATS[t.cat] ? t.cat : "discuss", e: [1,2,3].includes(+t.effort) ? +t.effort : 2,
+      stance: ["accept","partly","rebut"].includes(t.stance) ? t.stance : "accept", title: String(t.title).slice(0, 120), where: String(t.where || "").slice(0, 80),
+      todo: String(t.todo || "").slice(0, 600), orig: String(t.orig || "").slice(0, 900), p: null, quote: null, ...(t.follows ? { follows: String(t.follows).slice(0, 12) } : {}) };
+  });
+  const ids = new Set(tasks.map(t => t.id));
+  const groups = ((raw && raw.groups) || []).map(g => ({ ids: (g.ids || []).map(String).filter(i => ids.has(i)), note: String(g.note || "").slice(0, 160) })).filter(g => g.ids.length > 1);
+  return { meta, tasks, groups };
+}
+
+async function anchorTasks(tasks, paras, signal, onCount) {
+  let cap = 1500, block;
+  do { block = paras.map((p, i) => `[${i}] ${p.h ? "# " : ""}${p.t.length > cap ? p.t.slice(0, cap) + "…" : p.t}`).join("\n"); cap = Math.floor(cap * 0.6); } while (block.length > 400000 && cap > 120);
+  const raw = parseJSON(await askClaude(anchorPrompt(block, tasks), { signal, onText: t => onCount && onCount(countIds(t)) }));
+  const arr = Array.isArray(raw) ? raw : (raw && (raw.anchors || raw.tasks)) || [];
+  const by = Object.fromEntries(arr.filter(a => a && a.id).map(a => [String(a.id), a]));
+  tasks.forEach(t => {
+    const a = by[t.id]; t.wi = null; t.anchor = null; t.quote = null; if (!a) return;
+    if (a.p == null || a.p === "") return;
+    const p = Number(a.p); if (!Number.isInteger(p) || p < 0 || p >= paras.length) return;
+    t.wi = paras[p].wi; t.anchor = anchorOf(paras[p].t);
+    const q = a.quote ? String(a.quote).replace(/\s+/g, " ").trim().replace(/…$/, "") : "";
+    if (q && findQuote(paras[p].t, q) >= 0) t.quote = q;
+  });
+}
+function errCopy(e) {
+  const c = e && e.code;
+  return ({
+    no_key: "Add your Anthropic API key in Settings first.",
+    bad_key: "Your API key was refused. Check it in Settings.",
+    credit: "Your Anthropic account has no credit left. Add credit at console.anthropic.com.",
+    rate: "Too many requests right now. Wait a minute and try again.",
+    overloaded: "Claude is busy right now. Try again in a minute.",
+    bad_model: `The model “${getModel()}” wasn't accepted. Pick another in Settings.`,
+    network: "Couldn't reach Claude. Check your internet connection.",
+    too_long: "The answer was cut off because the reviews are very long. Split them and build in two parts.",
+    invalid_json: "Claude's answer came back incomplete. Try again.",
+    cancelled: "Stopped.",
+    no_tasks: "No tasks were found in that text. Check that you pasted the reviewers' comments."
+  }[c]) || (e && e.message ? `Something went wrong: ${e.message}` : "Something went wrong. Try again.");
+}
+
+/* ---------- per-document state ---------- */
+let DOCID = null, D = null, api14 = true;
+let view = "start", tab = "tasks", openId = null, backTo = "main", skipped = [], armed = null;
+let filt = { cats: Object.keys(CATS), effort: 0 };
+let nf = { rev: "", busy: false, step: 0, count: 0, error: "", ctl: null, imp: "", impErr: "" };
+const blank = () => ({ v: 1, meta: { title: "", journal: "", ref: "", due: "", editor: "", round: 1 }, tasks: [], groups: [], state: { done: {}, note: {}, stance: {}, replied: {} }, prev: null });
+function save() { if (DOCID && D) store.set("rd-doc-" + DOCID, JSON.stringify(D)); }
+async function ensureDocId() {
+  if (DOCID) return DOCID;
+  DOCID = newId();
+  try { const s = Office.context.document.settings; s.set("revisionDeskId", DOCID); await new Promise(r => s.saveAsync(() => r())); } catch (e) {}
+  return DOCID;
+}
+const doneCount = () => D.tasks.filter(t => D.state.done[t.id]).length;
+const cats = () => Object.keys(CATS).filter(c => D.tasks.some(t => t.cat === c));
+const visible = () => D.tasks.filter(t => filt.cats.includes(t.cat) && (!filt.effort || t.e === filt.effort));
+const byId = id => D.tasks.find(t => t.id === id);
+const groupOf = t => (D.groups || []).find(g => g.ids.includes(t.id));
+const focusOrder = () => visible().filter(t => !D.state.done[t.id]).sort((a, b) => skipped.indexOf(a.id) - skipped.indexOf(b.id) || a.e - b.e || D.tasks.indexOf(a) - D.tasks.indexOf(b));
+
+/* ---------- views ---------- */
+function effortDots(e) { return `<span class="effort" title="${EFFORT[e]}">${[1, 2, 3].map(i => `<i class="${i <= e ? "on" : ""}"></i>`).join("")}</span>`; }
+function startView() {
+  const hasKey = !!getKey();
+  const r = D && D.prev ? D.prev.round + 1 : 1;
+  return `<header><div class="eyebrow">Revision Desk${r > 1 ? ` · round ${r}` : ""}</div><h1>Turn the reviews into comments on this manuscript</h1></header>
+    ${!api14 ? `<div class="banner">This version of Word can't add comments from add-ins. Update Word (Help › Check for Updates) and reopen.</div>` : ""}
+    ${r > 1 ? `<p class="note">Claude will see your round ${r - 1} tasks and responses, and mark comments that come back with ↩.</p>` : ""}
+    <section class="card"><h2>Build it here</h2>
+      <p class="note">Claude reads this document and the reviews, then adds one colour-coded comment per task.</p>
+      <label class="drop" data-kind="rev" id="revDrop"><input type="file" id="revFile" multiple accept=".pdf,.docx,.txt,.md,.eml,text/plain"><b>Drop the review files</b><span>Decision letter or reports, any journal. PDF, .docx or text.</span></label>
+      <div class="stat" id="revStat"></div>
+      <textarea id="revText" placeholder="…or paste the decision email here, including the reviewers' comments.">${esc(nf.rev)}</textarea>
+      <label class="check"><input type="checkbox" id="trackChk" checked> <span>Turn on Track Changes, so you get the marked-up copy journals ask for</span></label>
+      ${hasKey ? `<button class="btn primary big" data-act="build" id="buildBtn" ${nf.busy || !api14 ? "disabled" : ""}>Build tasks and add comments</button><p class="note">Uses your Anthropic API key. Usually 1–3 minutes.</p>`
+        : `<div class="banner"><span>Building here needs your Anthropic API key (separate from your Claude plan).</span><button class="btn" data-act="settings">Add API key</button></div>`}
+      <div id="steps"></div>
+    </section>
+    <div class="or">or</div>
+    <section class="card"><h2>Bring tasks from Revision Desk in Claude</h2>
+      <p class="note">Uses your Claude plan, so no API key is needed.</p>
+      <ol class="how"><li>Open the revision in Revision Desk, with the manuscript added.</li><li>Click <b>Copy for Word</b>.</li><li>Paste below and click Import.</li></ol>
+      <textarea id="impText" placeholder="Paste here">${esc(nf.imp)}</textarea>
+      <button class="btn primary big" data-act="import" id="importBtn" ${!api14 ? "disabled" : ""}>Import and add comments</button>
+      ${nf.impErr ? `<p class="err">${esc(nf.impErr)}</p>` : ""}
+    </section>
+    <div class="row"><button class="linkbtn" data-act="settings">Settings</button></div>`;
+}
+function drawSteps() {
+  const el = $("#steps"); if (!el) return;
+  const names = ["Read this document", "Split the reviews into tasks", "Find each task's place in your text", "Add the comments"];
+  el.innerHTML = (nf.busy || nf.error) ? `<ol class="steps">${names.map((n, i) => {
+      const st = i < nf.step ? "done" : (i === nf.step && nf.busy ? "now" : "");
+      const extra = i === nf.step && nf.busy && nf.count ? ` <small>${nf.count} ${i === 1 ? "found" : i === 2 ? "placed" : "added"}</small>` : "";
+      return `<li class="${st}">${n}${extra}</li>`; }).join("")}</ol>
+    ${nf.busy ? `<button class="btn" data-act="stop">Stop</button>` : ""}${nf.error ? `<p class="err">${esc(nf.error)}</p>` : ""}` : "";
+  const b = $("#buildBtn"); if (b) b.disabled = nf.busy || !api14;
+}
+function tile(t) {
+  return `<button class="tile ${D.state.done[t.id] ? "done" : ""}" data-act="open" data-id="${esc(t.id)}" style="${cv(t.cat)}">
+    <span class="top"><span class="sym">${esc(t.id)}</span>${effortDots(t.e)}</span><span class="tick" aria-hidden="true">✓</span>
+    <span class="t">${esc(t.title)}</span><span class="w">${t.follows ? "↩ " : ""}${t.cid ? "💬 on the text" : "general"}</span></button>`;
+}
+function mainView() {
+  const m = D.meta, d = daysLeft(m.due), n = doneCount(), quick = D.tasks.filter(t => !D.state.done[t.id] && t.e === 1).length;
+  const unplaced = D.tasks.filter(t => !t.cid && (t.anchor || t.quote));
+  const bar = cats().map(c => { const all = D.tasks.filter(t => t.cat === c), dn = all.filter(t => D.state.done[t.id]).length;
+    return `<div class="seg" style="${cv(c)}; flex:${all.length}" title="${CATS[c].name}: ${dn}/${all.length}"><i style="width:${dn / all.length * 100}%"></i></div>`; }).join("");
+  let body = "";
+  if (tab === "focus") {
+    const q = focusOrder();
+    body = q.length ? `<p class="focus-note">One task at a time, quickest first. ${q.length} left in this filter.</p>${detailCard(q[0], true)}`
+      : `<div class="empty">${n === D.tasks.length ? "Every task is done. Copy the response letter and submit." : "Nothing left in this filter."}</div>`;
+  } else if (tab === "letter") {
+    const missing = D.tasks.filter(t => !D.state.note[t.id]).length;
+    body = `<div class="letter row"><strong>${missing ? `${missing} responses still say [TO WRITE]` : "Every comment has a response"}</strong><span class="spacer"></span><button class="btn primary" data-act="copy">Copy letter</button></div><div class="letter"><pre id="letterText">${esc(letterText())}</pre></div>`;
+  } else {
+    const v = visible();
+    body = v.length ? `<div class="groups">${Object.keys(CATS).filter(c => v.some(t => t.cat === c)).map(c => `
+      <section style="${cv(c)}"><h2 class="gtitle"><span class="dot"></span>${CATS[c].sq} ${CATS[c].name}</h2>
+      <div class="grid">${v.filter(t => t.cat === c).map(tile).join("")}</div></section>`).join("")}</div>` : `<div class="empty">No tasks match these filters.</div>`;
+  }
+  return `<header class="head"><div><div class="eyebrow">${esc([m.journal, m.ref, m.round > 1 ? "Round " + m.round : ""].filter(Boolean).join(" · ") || "Revision Desk")}</div>
+      <h1 class="clamp">${esc(m.title || "Your revision")}</h1></div>
+      ${d === null ? "" : `<div class="due"><b>${d}</b><span>days left<br>${esc(fmtDate(m.due))}</span></div>`}</header>
+    <section><div class="bar">${bar}</div><div class="pmeta"><span>${n} of ${D.tasks.length} done</span><span>${n === D.tasks.length ? "All done" : `${quick} quick wins left`}</span></div></section>
+    ${unplaced.length ? `<div class="banner"><span>${unplaced.length} task${unplaced.length > 1 ? "s aren't" : " isn't"} on your text yet.</span><button class="btn" data-act="placeMissing">Try placing them again</button></div>` : ""}
+    <div class="tabs" role="group" aria-label="View">${[["tasks", "Tasks"], ["focus", "Focus"], ["letter", "Letter"]].map(([k, l]) => `<button data-act="tab" data-tab="${k}" aria-pressed="${tab === k}">${l}</button>`).join("")}</div>
+    ${tab === "letter" ? "" : `<div class="row">${cats().map(k => { const left = D.tasks.filter(t => t.cat === k && !D.state.done[t.id]).length;
+        return `<button class="chip" data-act="cat" data-cat="${k}" style="${cv(k)}" aria-pressed="${filt.cats.includes(k)}" title="${CATS[k].name}"><span class="dot"></span>${CATS[k].name.split(" ")[0]} <small>${left}</small></button>`; }).join("")}</div>
+      <div class="row">${[[0, "Any effort"], [1, "Quick"], [2, "1–2 h"], [3, "Deep"]].map(([v, l]) => `<button class="chip" data-act="eff" data-eff="${v}" aria-pressed="${filt.effort === v}">${l}</button>`).join("")}</div>`}
+    ${body}
+    <section class="more">
+      <div class="row"><button class="btn" data-act="track">Turn on Track Changes</button><button class="btn" data-act="replace">Re-add all comments</button></div>
+      <div class="row"><button class="btn" data-act="nextround">${armed === "nextround" ? "Click again: start round " + (m.round + 1) : "Start round " + (m.round + 1)}</button>
+        <button class="btn danger" data-act="removeAll">${armed === "removeAll" ? "Click again to remove them" : "Remove task comments"}</button></div>
+      <p class="note">Before submitting, remove the task comments so they don't go to the journal.</p>
+      <div class="row"><button class="linkbtn" data-act="settings">Settings</button><span class="spacer"></span><button class="linkbtn" data-act="clear">${armed === "clear" ? "Click again to clear the task list" : "Clear task list"}</button></div>
+    </section>`;
+}
+function detailCard(t, focus) {
+  const g = groupOf(t), stance = D.state.stance[t.id] || t.stance || "accept";
+  return `<article class="dcard" style="${cv(t.cat)}"><div class="dhead"><span class="cat">${CATS[t.cat].sq} ${CATS[t.cat].name}</span><span class="sym">${esc(t.id)}</span><h2>${esc(t.title)}</h2></div>
+    <div class="dbody">
+      <div class="pills">${t.where ? `<span class="pill">📍 ${esc(t.where)}</span>` : ""}<span class="pill">⏱ ${EFFORT[t.e]}</span><span class="pill">${esc(t.source)}</span>${t.follows ? `<span class="pill">↩ back from ${esc(t.follows)}</span>` : ""}</div>
+      ${t.cid ? `<div class="loc"><span class="dotc"></span><span>Comment is on your text.</span><button class="btn" data-act="show" data-id="${esc(t.id)}">Show in document</button></div>` : ""}
+      <div><h3>What to do</h3><p>${esc(t.todo)}</p></div>
+      ${g ? `<div><h3>Solves together</h3><div class="together">${g.ids.filter(i => i !== t.id && byId(i)).map(i => `<button data-act="open" data-id="${esc(i)}" style="--cc: var(--${byId(i).cat})">${esc(i)}${D.state.done[i] ? " ✓" : ""}</button>`).join("")}<span>${esc(g.note)}</span></div></div>` : ""}
+      ${t.orig ? `<div><h3>What they wrote</h3><blockquote><cite>${esc(t.source)}</cite>${esc(t.orig)}</blockquote></div>` : ""}
+      <div><h3>Your stance</h3><div class="stance">${STANCES.map(([k, l]) => `<button data-act="stance" data-id="${esc(t.id)}" data-v="${k}" aria-pressed="${stance === k}">${l}</button>`).join("")}</div></div>
+      <div><h3><label for="note-${esc(t.id)}">What I changed</label></h3><textarea id="note-${esc(t.id)}" data-note="${esc(t.id)}" placeholder="One or two lines for the response letter. It's also added as a reply to the Word comment when you mark the task done.">${esc(D.state.note[t.id] || "")}</textarea></div>
+      ${focus ? "" : `<div><h3>Task type</h3><div class="cats">${Object.keys(CATS).map(c => `<button data-act="setcat" data-id="${esc(t.id)}" data-v="${c}" style="--cc: var(--${c})" aria-pressed="${t.cat === c}" title="${CATS[c].name}" aria-label="${CATS[c].name}"></button>`).join("")}</div></div>`}
+      <div class="dfoot">${focus
+        ? `<button class="btn go" data-act="done" data-id="${esc(t.id)}">✓ Done, next one</button><button class="btn" data-act="skip" data-id="${esc(t.id)}">Skip for now</button>`
+        : `<button class="btn go ${D.state.done[t.id] ? "undo" : ""}" data-act="done" data-id="${esc(t.id)}">${D.state.done[t.id] ? "Mark not done" : "✓ Mark done"}</button><span class="spacer"></span><button class="linkbtn" data-act="rm" data-id="${esc(t.id)}">${armed === "rm" + t.id ? "Click again to remove" : "Remove task"}</button>`}</div>
+    </div></article>`;
+}
+function taskView() {
+  const t = byId(openId); if (!t) { view = "main"; return mainView(); }
+  const list = visible(), i = list.findIndex(x => x.id === t.id);
+  return `<div class="row"><button class="linkbtn" data-act="back">← All tasks</button><span class="spacer"></span>
+      <button class="btn" data-act="open" data-id="${esc(list[i - 1]?.id || "")}" ${i <= 0 ? "disabled" : ""} aria-label="Previous task">←</button>
+      <button class="btn" data-act="open" data-id="${esc(list[i + 1]?.id || "")}" ${i < 0 || i >= list.length - 1 ? "disabled" : ""} aria-label="Next task">→</button></div>
+    ${detailCard(t, false)}`;
+}
+function settingsView() {
+  const k = getKey(), m = getModel();
+  return `<div class="row"><button class="linkbtn" data-act="back">← Back</button></div>
+    <header><div class="eyebrow">Settings</div><h1>Claude connection</h1></header>
+    <section class="card"><h2>Anthropic API key</h2>
+      <p class="note">Only needed to build tasks inside Word. Create one at console.anthropic.com › API keys. It's billed separately from your Claude plan, usually cents per revision. The key is stored only in this add-in on this computer.</p>
+      ${k ? `<p class="key">Saved: ${esc(k.slice(0, 10))}…${esc(k.slice(-4))}</p>` : ""}
+      <input class="txt" id="keyInput" type="password" autocomplete="off" placeholder="${k ? "Paste a new key to replace it" : "sk-ant-…"}">
+      <div class="row"><button class="btn primary" data-act="saveKey">Save key</button>${k ? `<button class="btn danger" data-act="forgetKey">Remove key</button>` : ""}</div></section>
+    <section class="card"><h2><label for="modelInput">Model</label></h2>
+      <input class="txt" id="modelInput" list="models" value="${esc(m)}"><datalist id="models">${MODELS.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</datalist>
+      <p class="note">${MODELS.map(([v, l]) => `<b>${v}</b>: ${l.split(": ")[1]}`).join("<br>")}</p>
+      <div class="row"><button class="btn" data-act="saveModel">Save model</button></div></section>`;
+}
+function outsideView() {
+  return `<header><div class="eyebrow">Revision Desk</div><h1>This page runs inside Word</h1></header>
+    <p class="note">Open Word, then click <b>Revision Desk</b> on the Home tab. If you don't see it, install the add-in using the steps in the README.</p>`;
+}
+function letterText() {
+  const m = D.meta, sources = [...new Set(D.tasks.map(t => t.source))];
+  let out = `Dear ${m.editor || "Editor"},\n\nThank you for the opportunity to revise our manuscript${m.title ? ` “${m.title}”` : ""}${m.ref ? ` (${m.ref})` : ""}. We thank the editor and the reviewers for their careful reading. We respond to each comment below: the comment is quoted, and our response follows.\n`;
+  sources.forEach(s => {
+    out += `\n\n${s === "Editor" ? "RESPONSE TO THE EDITOR AND JOURNAL REQUIREMENTS" : "RESPONSE TO " + s.toUpperCase()}\n`;
+    D.tasks.filter(t => t.source === s).forEach(t => {
+      const st = D.state.stance[t.id] || t.stance || "accept";
+      const lead = st === "accept" ? "We agree." : st === "partly" ? "We partly agree." : "We respectfully disagree.";
+      out += `\n${t.id}. “${t.orig || t.title}”\nResponse: ${D.state.note[t.id] ? lead + " " + D.state.note[t.id] : "[TO WRITE]"}\n`;
+    });
+  });
+  return out + `\n\nSincerely,\n[Your name], on behalf of all authors\n`;
+}
+
+let mode = "loading";
+function render() {
+  const app = $("#app"); const y = window.scrollY;
+  if (mode === "outside") { app.innerHTML = outsideView(); return; }
+  if (mode === "loading") return;
+  if (view === "settings") app.innerHTML = settingsView();
+  else if (!D || !D.tasks.length) { app.innerHTML = startView(); drawSteps(); }
+  else if (view === "task") app.innerHTML = taskView();
+  else app.innerHTML = mainView();
+  window.scrollTo(0, y);
+}
+function go(v) { view = v; armed = null; render(); window.scrollTo(0, 0); }
+
+/* ---------- actions ---------- */
+async function trackOn(quiet) {
+  try { await Word.run(async ctx => { ctx.document.changeTrackingMode = "TrackAll"; await ctx.sync(); }); if (!quiet) toast("Track Changes is on"); }
+  catch (e) { if (!quiet) toast("Couldn't turn on Track Changes. Use Review › Track Changes."); }
+}
+async function finishNewTasks(meta, tasks, groups, state) {
+  await ensureDocId();
+  const prev = D && D.prev;
+  D = blank(); D.prev = prev || null;
+  D.meta = { ...D.meta, ...meta, round: meta.round || (prev ? prev.round + 1 : 1) };
+  D.tasks = tasks; D.groups = groups || [];
+  if (state) ["done", "note", "stance"].forEach(k => D.state[k] = { ...(state[k] || {}) });
+  save();
+  const toPlace = D.tasks.filter(t => t.wi != null || t.anchor || t.quote);
+  const placed = await placeTasks(toPlace);
+  filt = { cats: Object.keys(CATS), effort: 0 }; tab = "tasks"; view = "main"; render(); window.scrollTo(0, 0);
+  const general = D.tasks.length - placed;
+  toast(`${placed} comments added${general ? `, ${general} general task${general > 1 ? "s" : ""} in the panel` : ""}`);
+  if (Object.keys(D.state.done).length) syncDoneToWord();
+}
+async function syncDoneToWord() {
+  try { await Word.run(async ctx => { const items = await allComments(ctx); D.tasks.forEach(t => { const c = matchComment(items, t); if (c && D.state.done[t.id]) c.resolved = true; }); await ctx.sync(); }); } catch (e) {}
+}
+async function build() {
+  if (nf.busy) return;
+  nf.rev = $("#revText").value; const track = $("#trackChk") && $("#trackChk").checked;
+  if (nf.rev.trim().length < 80) { nf.error = "Add the reviews first: drop the files or paste the decision email."; return drawSteps(); }
+  nf.busy = true; nf.error = ""; nf.step = 0; nf.count = 0; nf.ctl = new AbortController(); drawSteps();
+  const signal = nf.ctl.signal;
+  try {
+    const paras = await readDoc();
+    if (paras.length < 3) throw { code: "x", message: "This document looks empty. Open your manuscript first." };
+    nf.step = 1; drawSteps();
+    const msHead = paras.slice(0, 30).map(p => p.t).join("\n").slice(0, 4000);
+    const prev = D && D.prev ? { round: D.prev.round, tasks: D.prev.tasks } : null;
+    const raw = parseJSON(await askClaude(extractPrompt(nf.rev.slice(0, 200000), msHead, prev), { signal, onText: t => { nf.count = countIds(t); drawSteps(); } }));
+    const { meta, tasks, groups } = normalize(raw);
+    if (!tasks.length) throw { code: "no_tasks" };
+    if (prev) { const ids = new Set(prev.tasks.map(t => t.id)); tasks.forEach(t => { if (t.follows && !ids.has(t.follows)) delete t.follows; }); }
+    nf.step = 2; nf.count = 0; drawSteps();
+    await anchorTasks(tasks, paras, signal, c => { nf.count = c; drawSteps(); });
+    nf.step = 3; nf.count = 0; drawSteps();
+    if (track) await trackOn(true);
+    nf.busy = false; nf.rev = "";
+    const m = { title: meta.title || (paras.find(p => p.h) || paras[0]).t.slice(0, 200), journal: meta.journal || "", ref: meta.ref || "",
+      due: /^\d{4}-\d{2}-\d{2}$/.test(meta.due || "") ? meta.due : "", editor: meta.editor || "" };
+    await finishNewTasks(m, tasks, groups);
+  } catch (e) { setBusy(null); nf.busy = false; nf.error = errCopy(e); drawSteps(); }
+}
+async function importTasks() {
+  nf.imp = $("#impText").value.trim(); nf.impErr = "";
+  let data;
+  try { data = JSON.parse(nf.imp); } catch (e) { nf.impErr = "That isn't a Revision Desk export. In Revision Desk, click “Copy for Word” and paste again."; return render(); }
+  if (!data || data.app !== "revision-desk" || !Array.isArray(data.tasks) || !data.tasks.length) { nf.impErr = "That export has no tasks. Copy it again from Revision Desk."; return render(); }
+  const seen = new Set();
+  const tasks = data.tasks.filter(t => t && t.id && t.title && !seen.has(t.id) && seen.add(t.id)).map(t => ({
+    id: String(t.id).slice(0, 12), source: String(t.source || "Reviewer").slice(0, 40), cat: CATS[t.cat] ? t.cat : "discuss", e: [1, 2, 3].includes(+t.e) ? +t.e : 2,
+    stance: ["accept", "partly", "rebut"].includes(t.stance) ? t.stance : "accept", title: String(t.title).slice(0, 120), where: String(t.where || "").slice(0, 80),
+    todo: String(t.todo || "").slice(0, 600), orig: String(t.orig || "").slice(0, 900), quote: t.quote ? String(t.quote).slice(0, 200) : null,
+    anchor: t.anchor ? String(t.anchor).slice(0, 200) : null, ...(t.follows ? { follows: String(t.follows).slice(0, 12) } : {}), cid: null }));
+  const ids = new Set(tasks.map(t => t.id));
+  const groups = (data.groups || []).map(g => ({ ids: (g.ids || []).map(String).filter(i => ids.has(i)), note: String(g.note || "").slice(0, 160) })).filter(g => g.ids.length > 1);
+  const mm = data.meta || {};
+  nf.imp = "";
+  if ($("#trackChk") && $("#trackChk").checked) await trackOn(true);
+  await finishNewTasks({ title: mm.title || "", journal: mm.journal || "", ref: mm.ref || "", due: mm.due || "", editor: mm.editor || "", round: mm.round || 1 }, tasks, groups, data.state);
+  const without = tasks.filter(t => !t.anchor && !t.quote).length;
+  if (without === tasks.length) toast("Imported. These tasks have no place in the text yet: add the manuscript in Revision Desk and copy again.");
+}
+async function setDone(t, val) {
+  D.state.done[t.id] = val; save();
+  try {
+    await withComment(t, c => {
+      c.resolved = val;
+      const note = (D.state.note[t.id] || "").trim();
+      if (val && note && D.state.replied[t.id] !== note) { c.reply("✓ " + note); D.state.replied[t.id] = note; }
+    });
+    save();
+  } catch (e) { console.warn("resolve", e); }
+}
+async function showInDoc(t) {
+  try { const ok = await withComment(t, c => { c.getRange().select(); }); if (!ok) { t.cid = null; save(); render(); toast("That comment is no longer in the document."); } }
+  catch (e) { toast("Couldn't jump to that comment."); }
+}
+async function updateCommentText(t) { try { await withComment(t, c => { c.content = commentText(t); }); } catch (e) {} }
+
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-act]"); if (!b || b.disabled) return;
+  const act = b.dataset.act, id = b.dataset.id, t = id ? byId(id) : null;
+  if (!["nextround", "removeAll", "clear", "rm"].includes(act) && armed) { armed = null; }
+  switch (act) {
+    case "build": build(); break;
+    case "stop": if (nf.ctl) nf.ctl.abort(); break;
+    case "import": importTasks(); break;
+    case "settings": backTo = view === "settings" ? backTo : view; go("settings"); break;
+    case "back": go(view === "settings" ? (backTo === "settings" ? "main" : backTo) : "main"); break;
+    case "tab": tab = b.dataset.tab; view = "main"; render(); break;
+    case "cat": { const c = b.dataset.cat; filt.cats = filt.cats.includes(c) ? filt.cats.filter(x => x !== c) : [...filt.cats, c]; if (!filt.cats.some(x => cats().includes(x))) filt.cats = Object.keys(CATS); render(); break; }
+    case "eff": filt.effort = +b.dataset.eff; render(); break;
+    case "open": if (t) { openId = id; go("task"); if (t.cid) showInDoc(t); } break;
+    case "show": if (t) showInDoc(t); break;
+    case "stance": D.state.stance[id] = b.dataset.v; save(); b.parentElement.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); break;
+    case "done": {
+      const val = view === "task" ? !D.state.done[id] : true;
+      await setDone(t, val); if (val) toast(`${id} done${t.cid ? ", comment resolved" : ""}`); render(); break; }
+    case "skip": skipped = skipped.filter(x => x !== id); skipped.push(id); render(); break;
+    case "setcat": t.cat = b.dataset.v; if (!filt.cats.includes(t.cat)) filt.cats.push(t.cat); save(); render(); updateCommentText(t); break;
+    case "rm":
+      if (armed !== "rm" + id) { armed = "rm" + id; render(); break; }
+      armed = null; try { await withComment(t, c => c.delete()); } catch (err) {}
+      D.tasks = D.tasks.filter(x => x.id !== id); D.groups = (D.groups || []).map(g => ({ ...g, ids: g.ids.filter(x => x !== id) })).filter(g => g.ids.length > 1);
+      save(); go("main"); toast(`${id} removed`); break;
+    case "placeMissing": { const list = D.tasks.filter(x => !x.cid && (x.anchor || x.quote)); const n = await placeTasks(list); render(); toast(n ? `${n} comment${n > 1 ? "s" : ""} added` : "Still couldn't find those passages. The text may have changed."); break; }
+    case "replace": setBusy("Removing old task comments…"); try { await removeOurComments(); const n = await placeTasks(D.tasks.filter(x => x.anchor || x.quote)); render(); await syncDoneToWord(); toast(`${n} comments added again`); } catch (err) { setBusy(null); toast("Couldn't update the comments."); } break;
+    case "track": trackOn(false); break;
+    case "removeAll":
+      if (armed !== "removeAll") { armed = "removeAll"; render(); break; }
+      armed = null; setBusy("Removing task comments…"); try { await removeOurComments(); save(); toast("Task comments removed. Your tasks stay in the panel."); } catch (err) { toast("Couldn't remove the comments."); } setBusy(null); render(); break;
+    case "nextround":
+      if (armed !== "nextround") { armed = "nextround"; render(); break; }
+      armed = null;
+      try { await removeOurComments(); } catch (err) {}
+      D.prev = { round: D.meta.round || 1, tasks: D.tasks.map(x => ({ id: x.id, title: x.title, note: D.state.note[x.id] || "" })) };
+      D.meta.round = (D.meta.round || 1) + 1; D.tasks = []; D.groups = []; D.state = blank().state; save(); go("start"); break;
+    case "clear":
+      if (armed !== "clear") { armed = "clear"; render(); break; }
+      armed = null; D = null; if (DOCID) store.del("rd-doc-" + DOCID); go("start"); toast("Task list cleared. Comments in the document were kept."); break;
+    case "copy": {
+      const txt = letterText(); let ok = false;
+      try { await navigator.clipboard.writeText(txt); ok = true; } catch (err) {
+        const buf = $("#copyBuf"); buf.value = txt; buf.select(); try { ok = document.execCommand("copy"); } catch (e2) {}
+      }
+      toast(ok ? "Letter copied. Paste it into a new Word document." : "Couldn't copy. Select the letter text and press Cmd+C.");
+      break; }
+    case "saveKey": { const v = $("#keyInput").value.trim(); if (!v) { toast("Paste a key first."); break; } store.set("rd-apikey", v); toast("API key saved"); render(); break; }
+    case "forgetKey": store.del("rd-apikey"); toast("API key removed"); render(); break;
+    case "saveModel": { const v = $("#modelInput").value.trim(); if (v) store.set("rd-model", v); toast("Model saved"); break; }
+  }
+});
+let noteTimer = null;
+document.addEventListener("input", e => {
+  const id = e.target.dataset && e.target.dataset.note;
+  if (id && D) { D.state.note[id] = e.target.value; clearTimeout(noteTimer); noteTimer = setTimeout(save, 400); }
+  if (e.target.id === "revText") nf.rev = e.target.value;
+  if (e.target.id === "impText") nf.imp = e.target.value;
+});
+async function addRevFiles(files) {
+  const st = $("#revStat"); st.className = "stat"; st.textContent = "Reading…"; const ok = [], bad = [];
+  for (const f of files) {
+    try { const text = clean(await fileText(f)); if (text.length < 80) throw new Error("almost no text (scanned?)");
+      const box = $("#revText"); box.value = (box.value.trim() ? box.value.trim() + "\n\n" : "") + `===== File: ${f.name} =====\n` + text; nf.rev = box.value; ok.push(f.name); }
+    catch (e) { bad.push(`${f.name}: ${e.message || "couldn't read"}`); }
+  }
+  st.className = "stat " + (bad.length ? "bad" : "ok"); st.textContent = [ok.length ? `✓ Added ${ok.join(", ")}` : "", ...bad].filter(Boolean).join(" · ");
+}
+document.addEventListener("change", e => { if (e.target.id === "revFile" && e.target.files.length) { addRevFiles([...e.target.files]); e.target.value = ""; } });
+document.addEventListener("dragover", e => { const d = e.target.closest && e.target.closest(".drop"); if (d) { e.preventDefault(); d.classList.add("over"); } });
+document.addEventListener("dragleave", e => { const d = e.target.closest && e.target.closest(".drop"); if (d) d.classList.remove("over"); });
+document.addEventListener("drop", e => { const d = e.target.closest && e.target.closest(".drop"); if (!d) return; e.preventDefault(); d.classList.remove("over"); if (e.dataTransfer.files.length) addRevFiles([...e.dataTransfer.files]); });
+let lastSync = 0;
+function maybeSync() { if (Date.now() - lastSync > 1500) { lastSync = Date.now(); syncFromWord(); } }
+window.addEventListener("focus", maybeSync);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) maybeSync(); });
+document.addEventListener("pointerenter", maybeSync);
+
+function applyOfficeTheme() {
+  try {
+    const th = Office.context.officeTheme; if (!th || !th.bodyBackgroundColor) return;
+    const c = th.bodyBackgroundColor.replace("#", ""); const [r, g, b] = [0, 2, 4].map(i => parseInt(c.substr(i, 2), 16));
+    if ([r, g, b].some(isNaN)) return;
+    document.documentElement.dataset.theme = (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5 ? "dark" : "light";
+  } catch (e) {}
+}
+async function init() {
+  applyOfficeTheme();
+  api14 = !!(Office.context.requirements && Office.context.requirements.isSetSupported("WordApi", "1.4"));
+  try { DOCID = Office.context.document.settings.get("revisionDeskId") || null; } catch (e) { DOCID = null; }
+  if (DOCID) { try { D = JSON.parse(store.get("rd-doc-" + DOCID) || "null"); } catch (e) { D = null; } }
+  if ((!D || !D.tasks.length) && api14 && !(D && D.prev)) {
+    const rec = await recoverFromComments();
+    if (rec) { await ensureDocId(); D = blank(); D.tasks = rec.tasks; D.state.done = rec.done; D.meta.title = "Recovered from comments"; save(); toast("Task list rebuilt from the comments in this document."); }
+  }
+  if (D) { D.state = { ...blank().state, ...(D.state || {}) }; D.meta = { ...blank().meta, ...(D.meta || {}) }; D.groups = D.groups || []; }
+  mode = "word"; view = D && D.tasks.length ? "main" : "start"; render();
+  if (D && D.tasks.length) syncFromWord();
+}
+if (window.Office && Office.onReady) {
+  Office.onReady(info => { if (info && info.host === Office.HostType.Word) init(); else { mode = "outside"; render(); } });
+} else { mode = "outside"; render(); }
+</script>
+</body>
+</html>
